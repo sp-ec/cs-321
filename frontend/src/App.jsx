@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import CreateGroupPage from "./pages/CreateGroupPage";
 import JoinGroupPage from "./pages/JoinGroupPage";
 import CalenderViewPage from "./pages/CalenderViewPage";
+import GroupMembers from "./pages/GroupMembers/GroupMembers.jsx";
 
 function App() {
 	return (
@@ -15,6 +16,7 @@ function App() {
 						<Route path="/" element={<CreateGroupPage />} />
 						<Route path="/join" element={<JoinGroupPage />} />
 						<Route path="/calendar" element={<CalenderViewPage />} />
+						<Route path="/members" element={<GroupMembers />} />
 					</Routes>
 				</BrowserRouter>
 			</div>
