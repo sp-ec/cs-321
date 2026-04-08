@@ -1,13 +1,26 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import GroupMembers from "./GroupMembers/GroupMembers";
+import "./CalendarViewPage.css";
+import { MdCalendarViewWeek } from "react-icons/md";
+import { MdOutlineCalendarMonth } from "react-icons/md";
 
 function CalenderViewPage() {
 	const [events, setEvents] = useState([]);
 	const [heatmapMode, setHeatmapMode] = useState(false);
+	const [isWeekView, setIsWeekView] = useState(true);
+
+	const calendarRef = useRef(null);
+
+	const toggleView = () => {
+		const calendarApi = calendarRef.current.getApi();
+		const newView = isWeekView ? "dayGridMonth" : "timeGridWeek";
+		calendarApi.changeView(newView);
+		setIsWeekView(!isWeekView);
+	};
 
 	const handleSelect = (selectionInfo) => {
 		const newBlock = {
@@ -15,18 +28,14 @@ function CalenderViewPage() {
 			end: new Date(selectionInfo.endStr).getTime(),
 		};
 
-		// convert existing events into easily comparable timestamp blocks
 		const allBlocks = events.map((e) => ({
 			start: new Date(e.start).getTime(),
 			end: new Date(e.end).getTime(),
 		}));
 
 		allBlocks.push(newBlock);
-
-		// sort blocks by start time
 		allBlocks.sort((a, b) => a.start - b.start);
 
-		// merge overlapping or immediately adjacent blocks
 		const mergedBlocks = [];
 		let current = allBlocks[0];
 
@@ -41,7 +50,6 @@ function CalenderViewPage() {
 		}
 		mergedBlocks.push(current);
 
-		// format back into FullCalendar event objects
 		const newEvents = mergedBlocks.map((block, index) => ({
 			id: String(index),
 			start: new Date(block.start).toISOString(),
@@ -60,14 +68,12 @@ function CalenderViewPage() {
 		}
 	};
 
-	// apply the heatmap styling dynamically
 	const calendarEvents = events.map((event) => ({
 		...event,
-		backgroundColor: heatmapMode ? "rgba(34, 197, 94, 0.5)" : "#3b82f6", // green alpha vs solid blue
+		backgroundColor: heatmapMode ? "rgba(34, 197, 94, 0.5)" : "#3b82f6",
 		borderColor: heatmapMode ? "transparent" : "#3b82f6",
 	}));
 
-	// hide the time text inside the blocks when in heatmap mode
 	const renderEventContent = (eventInfo) => {
 		if (heatmapMode) {
 			return <div style={{ width: "100%", height: "100%" }}></div>;
@@ -83,49 +89,68 @@ function CalenderViewPage() {
 		<div>
 			<GroupMembers />
 
-			<div
-				style={{
-					marginBottom: "10px",
-					display: "flex",
-					gap: "10px",
-					alignItems: "center",
-				}}
-			>
-				<label
-					style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
+			<div className="mb-4 flex items-center gap-4 flex-row justify-end">
+				<div className="bg-zinc-900 p-4 rounded-lg">
+					<label className="flex items-center cursor-pointer gap-3 select-none">
+						<div
+							className={`relative w-11 h-6 rounded-full transition-colors duration-200 ease-in-out ${
+								heatmapMode ? "bg-green-500" : "bg-gray-200"
+							}`}
+						>
+							<div
+								className={`absolute top-[2px] left-[2px] w-5 h-5 bg-white rounded-full transition-transform duration-200 ease-in-out shadow-sm ${
+									heatmapMode ? "translate-x-5" : "translate-x-0"
+								}`}
+							/>
+						</div>
+						<input
+							type="checkbox"
+							checked={heatmapMode}
+							onChange={(e) => setHeatmapMode(e.target.checked)}
+							className="hidden"
+						/>
+						<span className="text-lg text-zinc-300">Heatmap Mode</span>
+					</label>
+				</div>
+
+				<button
+					onClick={toggleView}
+					className="bg-zinc-900 text-zinc-300 px-6 py-6 rounded-lg hover:bg-zinc-800 transition-colors font-medium"
 				>
-					<input
-						type="checkbox"
-						checked={heatmapMode}
-						onChange={(e) => setHeatmapMode(e.target.checked)}
-						style={{ marginRight: "8px" }}
-					/>
-					Heatmap Mode
-				</label>
+					{isWeekView ? (
+						<MdCalendarViewWeek size="36" />
+					) : (
+						<MdOutlineCalendarMonth size="36" />
+					)}
+				</button>
 			</div>
 
-			<FullCalendar
-				plugins={[timeGridPlugin, interactionPlugin]}
-				initialView="timeGridWeek"
-				slotDuration="00:15:00"
-				slotLabelInterval="00:60:00"
-				slotLabelFormat={{
-					hour: "numeric",
-					minute: "2-digit",
-					omitZeroMinute: false,
-					meridiem: "short",
-				}}
-				slotMinTime="06:00:00"
-				slotMaxTime="24:00:00"
-				allDaySlot={false}
-				selectable={true}
-				selectMirror={true}
-				unselectAuto={true}
-				select={handleSelect}
-				eventClick={handleEventClick}
-				events={calendarEvents}
-				eventContent={renderEventContent}
-			/>
+			<div className="bg-zinc-900 p-4 rounded-lg">
+				<FullCalendar
+					ref={calendarRef}
+					plugins={[timeGridPlugin, interactionPlugin, dayGridPlugin]}
+					initialView="timeGridWeek"
+					contentHeight="auto"
+					slotDuration="00:30:00"
+					slotLabelInterval="00:60:00"
+					slotLabelFormat={{
+						hour: "numeric",
+						minute: "2-digit",
+						omitZeroMinute: false,
+						meridiem: "short",
+					}}
+					slotMinTime="06:00:00"
+					slotMaxTime="24:00:00"
+					allDaySlot={false}
+					selectable={true}
+					selectMirror={true}
+					unselectAuto={true}
+					select={handleSelect}
+					eventClick={handleEventClick}
+					events={calendarEvents}
+					eventContent={renderEventContent}
+				/>
+			</div>
 		</div>
 	);
 }
