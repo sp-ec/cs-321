@@ -8,7 +8,7 @@ function App() {
 	return (
 		<>
 			<div className="bg-zinc-900 h-16 w-full shadow-md border-b border-zinc-800 flex flex-row justify-start place-items-center p-4">
-				<span className="text-2xl">Calendar App</span>
+				<span className="text-2xl">ezCalendar</span>
 			</div>
 			<div className="p-4">
 				<BrowserRouter>
