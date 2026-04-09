@@ -3,15 +3,21 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import GroupMembers from "./GroupMembers/GroupMembers";
 import "./CalendarViewPage.css";
 import { MdCalendarViewWeek } from "react-icons/md";
 import { MdOutlineCalendarMonth } from "react-icons/md";
 
-function CalenderViewPage() {
+function CalendarViewPage() {
 	const [events, setEvents] = useState([]);
 	const [heatmapMode, setHeatmapMode] = useState(false);
 	const [isWeekView, setIsWeekView] = useState(true);
+
+	/*Mock people array. Need to remove later*/
+	const members = [
+		{ id: 1, name: "Harry Potter", badgeClass: "member-badge-owner" },
+		{ id: 2, name: "Hermione Granger", badgeClass: "member-badge-admin" },
+		{ id: 3, name: "Ron Weasley", badgeClass: "member-badge-member" },
+	];
 
 	const calendarRef = useRef(null);
 
@@ -87,7 +93,19 @@ function CalenderViewPage() {
 
 	return (
 		<div>
-			<GroupMembers />
+			<h1 className="calendar-group-title">
+				Gryffindor Study Circle
+			</h1>
+			<div className="calendar-members-row">
+				{members.map((member) => (
+					<span
+						key={member.id}
+						className={`calendar-member-badge ${member.badgeClass}`}
+					>
+						{member.name}
+					</span>
+				))}
+			</div>
 
 			<div className="mb-4 flex items-center gap-4 flex-row justify-end">
 				<div className="bg-zinc-900 p-4 rounded-lg">
@@ -155,4 +173,4 @@ function CalenderViewPage() {
 	);
 }
 
-export default CalenderViewPage;
+export default CalendarViewPage;
