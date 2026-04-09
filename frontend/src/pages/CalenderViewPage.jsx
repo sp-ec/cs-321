@@ -3,7 +3,6 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import GroupMembers from "./GroupMembers/GroupMembers";
 import "./CalendarViewPage.css";
 import { MdCalendarViewWeek } from "react-icons/md";
 import { MdOutlineCalendarMonth } from "react-icons/md";
@@ -87,7 +86,6 @@ function CalenderViewPage() {
 
 	return (
 		<div>
-			<GroupMembers />
 
 			<div className="mb-4 flex items-center gap-4 flex-row justify-end">
 				<div className="bg-zinc-900 p-4 rounded-lg">
