@@ -101,125 +101,118 @@ Thanks!`
     };
 
     return (
-        <div className="group-members-container">
-            <div className="group-members-wrapper">
-                <div className="group-members-header">
+			<div className="group-members-container">
+				<div className="group-members-wrapper">
+					<div className="group-members-header">
+						{/* Centered group name */}
+						<h1 className="group-title">{groupData.groupName}</h1>
 
-                    {/* Top right privacy */}
-                    <div className="group-header-top">
-                        {isOwner ? (
-                            <select
-                                className="group-visibility-select"
-                                value={editedPrivacy}
-                                onChange={(e) => setEditedPrivacy(e.target.value)}
-                            >
-                                <option value="private">🔒 Private</option>
-                                <option value="public">🌍 Public</option>
-                            </select>
-                        ) : (
-                            <span className="group-visibility-badge">
-        {groupData.privacy === "private" ? "🔒 Private" : "🌍 Public"}
-      </span>
-                        )}
-                    </div>
+						<p>View group details and members.</p>
+					</div>
 
-                    {/* Centered group name */}
-                    <h1 className="group-title">{groupData.groupName}</h1>
+					<div className="group-info-card">
+						<div className="group-info-row group-info-column">
+							<span className="group-info-label">Description</span>
 
-                    <p>View group details and members.</p>
-                </div>
+							{isOwner ? (
+								<textarea
+									className="group-info-textarea"
+									value={editedDescription}
+									onChange={(e) => setEditedDescription(e.target.value)}
+								/>
+							) : (
+								<p className="group-description-text">
+									{groupData.description}
+								</p>
+							)}
+						</div>
 
-                <div className="group-info-card">
-                    <div className="group-info-row group-info-column">
-                        <span className="group-info-label">Description</span>
+						{isOwner && (
+							<button
+								className="save-group-button"
+								onClick={handleSaveGroupInfo}
+							>
+								Save Group Details
+							</button>
+						)}
+					</div>
 
-                        {isOwner ? (
-                            <textarea
-                                className="group-info-textarea"
-                                value={editedDescription}
-                                onChange={(e) => setEditedDescription(e.target.value)}
-                            />
-                        ) : (
-                            <p className="group-description-text">{groupData.description}</p>
-                        )}
-                    </div>
+					{showInvitePanel && (
+						<div className="invite-panel">
+							<div className="invite-panel-header">
+								<h2>Invite New Member</h2>
+								<button
+									className="close-invite-button"
+									onClick={() => setShowInvitePanel(false)}
+								>
+									×
+								</button>
+							</div>
 
-                    {isOwner && (
-                        <button className="save-group-button" onClick={handleSaveGroupInfo}>
-                            Save Group Details
-                        </button>
-                    )}
-                </div>
+							<label className="invite-label">Join Group Link</label>
+							<div className="invite-link-row">
+								<input
+									className="invite-link-input"
+									type="text"
+									value={joinLink}
+									readOnly
+								/>
+								<button className="invite-action-button" onClick={copyJoinLink}>
+									Copy Link
+								</button>
+							</div>
 
-                {showInvitePanel && (
-                    <div className="invite-panel">
-                        <div className="invite-panel-header">
-                            <h2>Invite New Member</h2>
-                            <button
-                                className="close-invite-button"
-                                onClick={() => setShowInvitePanel(false)}
-                            >
-                                ×
-                            </button>
-                        </div>
+							<label className="invite-label">Send by Email</label>
+							<div className="invite-link-row">
+								<input
+									className="invite-email-input"
+									type="email"
+									placeholder="Enter member email"
+									value={inviteEmail}
+									onChange={(e) => setInviteEmail(e.target.value)}
+								/>
+								<button
+									className="invite-action-button"
+									onClick={handleSendInvite}
+								>
+									Send Invite
+								</button>
+							</div>
+						</div>
+					)}
 
-                        <label className="invite-label">Join Group Link</label>
-                        <div className="invite-link-row">
-                            <input
-                                className="invite-link-input"
-                                type="text"
-                                value={joinLink}
-                                readOnly
-                            />
-                            <button className="invite-action-button" onClick={copyJoinLink}>
-                                Copy Link
-                            </button>
-                        </div>
+					<div className="members-grid">
+						{groupData.members.map((member) => (
+							<div key={member.id} className="member-card">
+								<div className="member-card-top">
+									<span className={getRoleBadgeClass(member.role)}>
+										{member.role}
+									</span>
+								</div>
 
-                        <label className="invite-label">Send by Email</label>
-                        <div className="invite-link-row">
-                            <input
-                                className="invite-email-input"
-                                type="email"
-                                placeholder="Enter member email"
-                                value={inviteEmail}
-                                onChange={(e) => setInviteEmail(e.target.value)}
-                            />
-                            <button className="invite-action-button" onClick={handleSendInvite}>
-                                Send Invite
-                            </button>
-                        </div>
-                    </div>
-                )}
+								<div className="profile-container">
+									{member.profilePicture ? (
+										<img src={member.profilePicture} alt={member.name} />
+									) : (
+										<span className="profile-initials">
+											{getInitials(member.name)}
+										</span>
+									)}
+								</div>
 
-                <div className="members-grid">
-                    {groupData.members.map((member) => (
-                        <div key={member.id} className="member-card">
-                            <div className="member-card-top">
-                                <span className={getRoleBadgeClass(member.role)}>{member.role}</span>
-                            </div>
+								<div className="member-name">{member.name}</div>
+							</div>
+						))}
 
-                            <div className="profile-container">
-                                {member.profilePicture ? (
-                                    <img src={member.profilePicture} alt={member.name} />
-                                ) : (
-                                    <span className="profile-initials">{getInitials(member.name)}</span>
-                                )}
-                            </div>
-
-                            <div className="member-name">{member.name}</div>
-                        </div>
-                    ))}
-
-                    <div className="add-card" onClick={() => setShowInvitePanel(true)}>
-                        <div className="add-icon">+</div>
-                        <h2>Add Member</h2>
-                        <p>Invite someone with a join link or email</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
+						<div className="add-card" onClick={() => setShowInvitePanel(true)}>
+							<div className="add-icon">+</div>
+							<h2>Add Member</h2>
+							<p>Invite someone with a join link or email</p>
+						</div>
+					</div>
+				</div>
+			</div>
+		);
 }
 
 export default GroupMembersPage;

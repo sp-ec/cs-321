@@ -93,9 +93,7 @@ function CalendarViewPage() {
 
 	return (
 		<div>
-			<h1 className="calendar-group-title">
-				Gryffindor Study Circle
-			</h1>
+			<h1 className="calendar-group-title mt-8">Gryffindor Study Circle</h1>
 			<div className="calendar-members-row">
 				{members.map((member) => (
 					<span
