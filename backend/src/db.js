@@ -1,10 +1,8 @@
 import mongoose from "mongoose";
-const MONGO_URI =
-  "mongodb+srv://noahmartineau8_db_user:zslGOTEh0LfOKsD7@cluster0.tau5xgr.mongodb.net/?appName=Cluster0";
 
 export const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(MONGO_URI);
+    const conn = await mongoose.connect(process.env.MONGO_URI);
     console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
     console.error("Error connecting to MongoDB:", error);

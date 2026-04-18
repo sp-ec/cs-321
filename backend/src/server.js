@@ -2,6 +2,7 @@ import { connectDB, closeDB, gracefulShutdown } from "./db.js";
 import routes from "./routes.js";
 import express from "express";
 import cors from "cors";
+import "dotenv/config";
 
 const app = express();
 const PORT = 3000;
