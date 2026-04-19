@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 import CreateGroupPage from "./pages/CreateGroupPage";
-import JoinGroupPage from "./pages/JoinGroupPage";
+import JoinGroupPage from "./pages/JoinGroupPage.jsx";
 import CalendarViewPage from "./pages/CalendarViewPage";
 import GroupMembersPage from "./pages/GroupMembersPage/GroupMembersPage.jsx";
 
