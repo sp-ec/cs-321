@@ -1,5 +1,5 @@
 import express from "express";
-import { createGroupResponse } from "./services/group.js";
+import { createGroupResponse } from "./services/group/group.js";
 
 const router = express.Router();
 router.post("/groups/create", createGroupResponse);

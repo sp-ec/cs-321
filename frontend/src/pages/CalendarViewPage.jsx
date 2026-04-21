@@ -6,8 +6,30 @@ import interactionPlugin from "@fullcalendar/interaction";
 import "./CalendarViewPage.css";
 import { MdCalendarViewWeek } from "react-icons/md";
 import { MdOutlineCalendarMonth } from "react-icons/md";
+import { useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 
 function CalendarViewPage() {
+	const { groupId } = useParams();
+	const navigate = useNavigate();
+
+	useEffect(() => {
+		const checkGroupExists = async () => {
+			try {
+				const response = await fetch(`/api/groups/${groupId}`);
+				if (!response.ok) {
+					//if 404/error, send back to home page
+					console.log("Group not found, redirecting to home page.");
+					navigate("/");
+				}
+			} catch (error) {
+				navigate("/");
+			}
+		};
+		console.log("GroupID: ", groupId);
+		checkGroupExists();
+	}, [groupId, navigate]);
+
 	const [events, setEvents] = useState([]);
 	const [heatmapMode, setHeatmapMode] = useState(false);
 	const [isWeekView, setIsWeekView] = useState(true);
