@@ -11,16 +11,32 @@ import { useParams, useNavigate } from "react-router-dom";
 
 function CalendarViewPage() {
 	const { groupId } = useParams();
+	const [groupData, setGroupData] = useState(null);
 	const navigate = useNavigate();
 
 	useEffect(() => {
 		const checkGroupExists = async () => {
 			try {
-				const response = await fetch(`/api/groups/${groupId}`);
+				const response = await fetch(
+					`http://localhost:3000/api/groups/fetch?groupId=${groupId}`,
+					{
+						method: "GET",
+						headers: {
+							"Content-Type": "application/json",
+						},
+					},
+				);
 				if (!response.ok) {
 					//if 404/error, send back to home page
 					console.log("Group not found, redirecting to home page.");
 					navigate("/");
+				}
+
+				try {
+					const data = await response.json();
+					setGroupData(data);
+				} catch (error) {
+					console.error("Error parsing group data:", error);
 				}
 			} catch (error) {
 				navigate("/");
@@ -33,13 +49,6 @@ function CalendarViewPage() {
 	const [events, setEvents] = useState([]);
 	const [heatmapMode, setHeatmapMode] = useState(false);
 	const [isWeekView, setIsWeekView] = useState(true);
-
-	/*Mock people array. Need to remove later*/
-	const members = [
-		{ id: 1, name: "Harry Potter", badgeClass: "member-badge-owner" },
-		{ id: 2, name: "Hermione Granger", badgeClass: "member-badge-admin" },
-		{ id: 3, name: "Ron Weasley", badgeClass: "member-badge-member" },
-	];
 
 	const calendarRef = useRef(null);
 
@@ -115,14 +124,16 @@ function CalendarViewPage() {
 
 	return (
 		<div>
-			<h1 className="calendar-group-title mt-8">Gryffindor Study Circle</h1>
+			<h1 className="calendar-group-title mt-8">
+				{groupData?.groupName || "Group Loading..."}
+			</h1>
 			<div className="calendar-members-row">
-				{members.map((member) => (
+				{groupData?.users.map((member, index) => (
 					<span
-						key={member.id}
-						className={`calendar-member-badge ${member.badgeClass}`}
+						key={member.userId}
+						className={`calendar-member-badge member-badge-${(index % 6) + 1}`}
 					>
-						{member.name}
+						{member.userName}
 					</span>
 				))}
 			</div>

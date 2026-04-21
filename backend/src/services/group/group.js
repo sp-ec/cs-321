@@ -26,3 +26,19 @@ export const createGroupResponse = async (req, res) => {
   const group = await createGroup(userName, groupName);
   res.json(group);
 };
+
+export const fetchGroupResponse = async (req, res) => {
+	const { groupId } = req.query;
+
+	if (!groupId) {
+		return res
+			.status(400)
+			.json({ message: "groupId query parameter is required" });
+	}
+
+	const group = await Group.findOne(
+		{ groupId: groupId },
+		{ _id: false },
+	).lean();
+	res.json(group);
+};
