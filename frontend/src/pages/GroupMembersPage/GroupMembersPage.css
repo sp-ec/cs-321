@@ -25,6 +25,7 @@
     color: #a1a1aa;
     margin: 0;
 }
+
 .group-header-top {
     display: flex;
     justify-content: flex-end;
@@ -33,6 +34,15 @@
 .group-title {
     text-align: center;
 }
+
+.group-name-placeholder {
+    margin: 0;
+    text-align: center;
+    font-size: 2rem;
+    font-weight: 700;
+    color: white;
+}
+
 .group-title-row {
     display: flex;
     justify-content: space-between;
@@ -143,6 +153,12 @@
     background-color: #222226;
 }
 
+.save-group-button:disabled,
+.member-edit-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 /* Invite Panel */
 .invite-panel {
     background-color: #18181b;
@@ -251,7 +267,23 @@
 }
 
 .member-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 1rem;
+}
+
+.member-edit-button {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    border: 1px solid #3f3f46;
+    background: #0f0f11;
+    color: #d4d4d8;
+    padding: 0;
 }
 
 /* Role Badge */
@@ -282,6 +314,12 @@
     border: 1px solid #3f3f46;
 }
 
+.role-badge-empty {
+    background-color: #27272a;
+    color: #a1a1aa;
+    border: 1px solid #3f3f46;
+}
+
 /* Profile */
 .profile-container {
     width: 110px;
@@ -302,6 +340,22 @@
     object-fit: cover;
 }
 
+.profile-container-empty {
+    border-style: dashed;
+}
+
+.profile-empty-circle {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #a1a1aa;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
 .profile-initials {
     font-size: 1.5rem;
     font-weight: bold;
@@ -313,6 +367,30 @@
     font-weight: 600;
     color: white;
     word-break: break-word;
+}
+
+.member-name-empty {
+    color: #a1a1aa;
+    line-height: 1.5;
+}
+
+.member-card-empty {
+    min-height: 250px;
+}
+
+.member-editor {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.member-save-button {
+    width: 100%;
+}
+
+.members-empty-message {
+    margin: 1rem 0 0;
+    text-align: center;
+    color: #a1a1aa;
 }
 
 /* Add Member Card */

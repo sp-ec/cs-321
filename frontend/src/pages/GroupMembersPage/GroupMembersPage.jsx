@@ -1,218 +1,193 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
+import { FiEdit2 } from "react-icons/fi";
+import { useParams } from "react-router-dom";
 import "./GroupMembersPage.css";
 
 function GroupMembersPage() {
-    // Frontend-only placeholder group data
-    const [groupData, setGroupData] = useState({
-        id: "group-123",
-        groupName: "Gryffindor Study Circle",
-        description: "A group for planning hangouts, adventures, and everything in between.",
-        privacy: "private",
-        creatorUsername: "HarryPotter",
-        currentUsername: "HarryPotter", // placeholder current user
-        members: [
-            {
-                id: 1,
-                name: "Harry Potter",
-                role: "Owner",
-                profilePicture: "",
-            },
-            {
-                id: 2,
-                name: "Hermione Granger",
-                role: "Admin",
-                profilePicture: "",
-            },
-            {
-                id: 3,
-                name: "Ron Weasley",
-                role: "Member",
-                profilePicture: "",
-            },
-        ],
-    });
+  const { groupId } = useParams();
+  const [showInvitePanel, setShowInvitePanel] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [isEditingGroup, setIsEditingGroup] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
 
-    const [showInvitePanel, setShowInvitePanel] = useState(false);
-    const [inviteEmail, setInviteEmail] = useState("");
-    const [editedDescription, setEditedDescription] = useState(groupData.description);
-    const [editedPrivacy, setEditedPrivacy] = useState(groupData.privacy);
+  const joinLink = useMemo(() => {
+    if (!groupId) {
+      return "";
+    }
 
-    const isOwner = groupData.currentUsername === groupData.creatorUsername;
-    const joinLink = `${window.location.origin}/join?group=${groupData.id}`;
+    return `${window.location.origin}/${groupId}/join`;
+  }, [groupId]);
 
-    const getInitials = (name) => {
-        if (!name || !name.trim()) return "?";
+  const copyJoinLink = async () => {
+    if (!joinLink) {
+      return;
+    }
 
-        return name
-            .split(" ")
-            .filter(Boolean)
-            .map((word) => word[0])
-            .join("")
-            .slice(0, 2)
-            .toUpperCase();
-    };
+    try {
+      await navigator.clipboard.writeText(joinLink);
+    } catch {
+      // UI shell only: no error surface yet.
+    }
+  };
 
-    const getRoleBadgeClass = (role) => {
-        if (role === "Owner") return "role-badge role-owner";
-        if (role === "Admin") return "role-badge role-admin";
-        return "role-badge role-member";
-    };
+  const handleSendInvite = () => {
+    if (!inviteEmail.trim() || !joinLink) {
+      return;
+    }
 
-    const copyJoinLink = async () => {
-        try {
-            await navigator.clipboard.writeText(joinLink);
-            alert("Join link copied to clipboard.");
-        } catch (error) {
-            alert("Could not copy the link.");
-        }
-    };
-
-    const handleSendInvite = () => {
-        if (!inviteEmail.trim()) {
-            alert("Please enter an email address.");
-            return;
-        }
-
-        const subject = encodeURIComponent(`Join ${groupData.groupName}`);
-        const body = encodeURIComponent(
-            `Hi,
-
-You have been invited to join the group "${groupData.groupName}".
+    const subject = encodeURIComponent("Join this group");
+    const body = encodeURIComponent(
+      `Hi,
 
 Use this link to join:
-${joinLink}
+${joinLink}`,
+    );
 
-If you do not enter a role when joining, your role will default to Member.
+    window.location.href = `mailto:${inviteEmail}?subject=${subject}&body=${body}`;
+  };
 
-Thanks!`
-        );
+  return (
+    <div className="group-members-container">
+      <div className="group-members-wrapper">
+        <div className="group-members-header">
+          <h1 className="group-title">Members</h1>
+          <p>Group details and member cards will appear here once integration is connected.</p>
+        </div>
 
-        window.location.href = `mailto:${inviteEmail}?subject=${subject}&body=${body}`;
-    };
+        <div className="group-info-card">
+          <div className="group-header-row">
+            <div className="group-header-content">
+              {isEditingGroup ? (
+                <>
+                  <input
+                    className="group-title-input"
+                    value=""
+                    placeholder="Group name"
+                    disabled
+                    readOnly
+                  />
+                  <textarea
+                    className="group-info-textarea group-description-input"
+                    value=""
+                    placeholder="Group description"
+                    disabled
+                    readOnly
+                  />
+                </>
+              ) : (
+                <>
+                  <h2 className="group-name-placeholder">Group name unavailable</h2>
+                  <p className="group-description-text group-subtitle">
+                    Group description will load here when real group data is available.
+                  </p>
+                </>
+              )}
+            </div>
 
-    const handleSaveGroupInfo = () => {
-        setGroupData((prev) => ({
-            ...prev,
-            description: editedDescription,
-            privacy: editedPrivacy,
-        }));
+            <div className="group-header-actions">
+              <button
+                className="save-group-button"
+                type="button"
+                disabled
+                onClick={() => setIsEditingGroup((value) => !value)}
+              >
+                Edit
+              </button>
+            </div>
+          </div>
+        </div>
 
-        alert("Frontend placeholder: group details updated.");
-    };
+        <div className="group-info-card">
+          <div className="section-heading-row">
+            <h2>Invite Members</h2>
+            <button
+              className="save-group-button"
+              type="button"
+              onClick={() => setShowInvitePanel((value) => !value)}
+            >
+              {showInvitePanel ? "Hide Invite Tools" : "Show Invite Tools"}
+            </button>
+          </div>
 
-    return (
-			<div className="group-members-container">
-				<div className="group-members-wrapper">
-					<div className="group-members-header">
-						{/* Centered group name */}
-						<h1 className="group-title">{groupData.groupName}</h1>
+          {showInvitePanel && (
+            <div className="invite-panel">
+              <label className="invite-label">Join group link</label>
+              <div className="invite-link-row">
+                <input className="invite-link-input" type="text" value={joinLink} readOnly />
+                <button className="invite-action-button" type="button" onClick={copyJoinLink}>
+                  Copy Link
+                </button>
+              </div>
 
-						<p>View group details and members.</p>
-					</div>
+              <label className="invite-label">Send by email</label>
+              <div className="invite-link-row">
+                <input
+                  className="invite-email-input"
+                  type="email"
+                  placeholder="Enter member email"
+                  value={inviteEmail}
+                  onChange={(event) => setInviteEmail(event.target.value)}
+                />
+                <button className="invite-action-button" type="button" onClick={handleSendInvite}>
+                  Send Invite
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
 
-					<div className="group-info-card">
-						<div className="group-info-row group-info-column">
-							<span className="group-info-label">Description</span>
+        <div className="members-section">
+          <div className="section-heading-row">
+            <h2>Group Members</h2>
+          </div>
 
-							{isOwner ? (
-								<textarea
-									className="group-info-textarea"
-									value={editedDescription}
-									onChange={(e) => setEditedDescription(e.target.value)}
-								/>
-							) : (
-								<p className="group-description-text">
-									{groupData.description}
-								</p>
-							)}
-						</div>
+          <div className="members-grid">
+            <div className="member-card member-card-empty">
+              <div className="member-card-top">
+                <span className="role-badge role-badge-empty">Role unavailable</span>
+                <button
+                  className="member-edit-button"
+                  type="button"
+                  aria-label="Edit profile"
+                  disabled
+                  onClick={() => setIsEditingProfile((value) => !value)}
+                >
+                  <FiEdit2 size={16} />
+                </button>
+              </div>
 
-						{isOwner && (
-							<button
-								className="save-group-button"
-								onClick={handleSaveGroupInfo}
-							>
-								Save Group Details
-							</button>
-						)}
-					</div>
+              <div className="profile-container profile-container-empty">
+                <div className="profile-empty-circle">No Image</div>
+              </div>
 
-					{showInvitePanel && (
-						<div className="invite-panel">
-							<div className="invite-panel-header">
-								<h2>Invite New Member</h2>
-								<button
-									className="close-invite-button"
-									onClick={() => setShowInvitePanel(false)}
-								>
-									×
-								</button>
-							</div>
+              {isEditingProfile ? (
+                <div className="member-editor">
+                  <input
+                    className="group-info-input"
+                    value=""
+                    placeholder="Username"
+                    disabled
+                    readOnly
+                  />
+                  <button className="save-group-button member-save-button" type="button" disabled>
+                    Save Profile
+                  </button>
+                </div>
+              ) : (
+                <div className="member-name member-name-empty">
+                  Member cards will appear here after data integration.
+                </div>
+              )}
+            </div>
+          </div>
 
-							<label className="invite-label">Join Group Link</label>
-							<div className="invite-link-row">
-								<input
-									className="invite-link-input"
-									type="text"
-									value={joinLink}
-									readOnly
-								/>
-								<button className="invite-action-button" onClick={copyJoinLink}>
-									Copy Link
-								</button>
-							</div>
-
-							<label className="invite-label">Send by Email</label>
-							<div className="invite-link-row">
-								<input
-									className="invite-email-input"
-									type="email"
-									placeholder="Enter member email"
-									value={inviteEmail}
-									onChange={(e) => setInviteEmail(e.target.value)}
-								/>
-								<button
-									className="invite-action-button"
-									onClick={handleSendInvite}
-								>
-									Send Invite
-								</button>
-							</div>
-						</div>
-					)}
-
-					<div className="members-grid">
-						{groupData.members.map((member) => (
-							<div key={member.id} className="member-card">
-								<div className="member-card-top">
-									<span className={getRoleBadgeClass(member.role)}>
-										{member.role}
-									</span>
-								</div>
-
-								<div className="profile-container">
-									{member.profilePicture ? (
-										<img src={member.profilePicture} alt={member.name} />
-									) : (
-										<span className="profile-initials">
-											{getInitials(member.name)}
-										</span>
-									)}
-								</div>
-
-								<div className="member-name">{member.name}</div>
-							</div>
-						))}
-
-						<div className="add-card" onClick={() => setShowInvitePanel(true)}>
-							<div className="add-icon">+</div>
-							<h2>Add Member</h2>
-							<p>Invite someone with a join link or email</p>
-						</div>
-					</div>
-				</div>
-			</div>
-		);
+          <p className="members-empty-message">
+            No real member data is connected in this version of the page.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default GroupMembersPage;
