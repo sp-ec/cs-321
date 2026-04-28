@@ -169,6 +169,11 @@
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
 }
 
+.members-invite-panel {
+    margin-top: 1.5rem;
+    margin-bottom: 0;
+}
+
 .invite-panel-header {
     display: flex;
     justify-content: space-between;
@@ -264,6 +269,50 @@
 .member-card:hover {
     border-color: #3f3f46;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.invite-member-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    border: 2px dashed #3f3f46;
+    cursor: pointer;
+    background-color: #141417;
+    min-height: 250px;
+}
+
+.invite-member-card:hover {
+    border-color: #71717a;
+    background-color: #18181bcc;
+}
+
+.invite-member-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 2px dashed #52525b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    margin: 0 auto 1rem;
+    color: #a1a1aa;
+}
+
+.invite-member-title {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.15rem;
+    color: white;
+    font-weight: 600;
+}
+
+.invite-member-text {
+    color: #a1a1aa;
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+    line-height: 1.4;
 }
 
 .member-card-top {

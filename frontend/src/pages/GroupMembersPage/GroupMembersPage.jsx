@@ -97,45 +97,6 @@ ${joinLink}`,
           </div>
         </div>
 
-        <div className="group-info-card">
-          <div className="section-heading-row">
-            <h2>Invite Members</h2>
-            <button
-              className="save-group-button"
-              type="button"
-              onClick={() => setShowInvitePanel((value) => !value)}
-            >
-              {showInvitePanel ? "Hide Invite Tools" : "Show Invite Tools"}
-            </button>
-          </div>
-
-          {showInvitePanel && (
-            <div className="invite-panel">
-              <label className="invite-label">Join group link</label>
-              <div className="invite-link-row">
-                <input className="invite-link-input" type="text" value={joinLink} readOnly />
-                <button className="invite-action-button" type="button" onClick={copyJoinLink}>
-                  Copy Link
-                </button>
-              </div>
-
-              <label className="invite-label">Send by email</label>
-              <div className="invite-link-row">
-                <input
-                  className="invite-email-input"
-                  type="email"
-                  placeholder="Enter member email"
-                  value={inviteEmail}
-                  onChange={(event) => setInviteEmail(event.target.value)}
-                />
-                <button className="invite-action-button" type="button" onClick={handleSendInvite}>
-                  Send Invite
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
         <div className="members-section">
           <div className="section-heading-row">
             <h2>Group Members</h2>
@@ -179,7 +140,45 @@ ${joinLink}`,
                 </div>
               )}
             </div>
+
+            <button
+              className="member-card invite-member-card"
+              type="button"
+              onClick={() => setShowInvitePanel((value) => !value)}
+            >
+              <div className="invite-member-icon">+</div>
+              <div className="invite-member-title">Invite Member</div>
+              <p className="invite-member-text">
+                Share a join link or send an invite email.
+              </p>
+            </button>
           </div>
+
+          {showInvitePanel && (
+            <div className="invite-panel members-invite-panel">
+              <label className="invite-label">Join group link</label>
+              <div className="invite-link-row">
+                <input className="invite-link-input" type="text" value={joinLink} readOnly />
+                <button className="invite-action-button" type="button" onClick={copyJoinLink}>
+                  Copy Link
+                </button>
+              </div>
+
+              <label className="invite-label">Send by email</label>
+              <div className="invite-link-row">
+                <input
+                  className="invite-email-input"
+                  type="email"
+                  placeholder="Enter member email"
+                  value={inviteEmail}
+                  onChange={(event) => setInviteEmail(event.target.value)}
+                />
+                <button className="invite-action-button" type="button" onClick={handleSendInvite}>
+                  Send Invite
+                </button>
+              </div>
+            </div>
+          )}
 
           <p className="members-empty-message">
             No real member data is connected in this version of the page.
