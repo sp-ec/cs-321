@@ -11,7 +11,7 @@ function sanitizeName(value) {
 
 function buildMemberColor(memberCount) {
   const hue = Math.round((memberCount * 137.508) % 360);
-  return `hsl(${hue} 70% 55%)`;
+  return `hsl(${hue},70%,55%)`;
 }
 
 function formatGroup(group) {
@@ -26,8 +26,6 @@ function formatGroup(group) {
     users: group.users.map((user) => ({
       userId: user.userId.toString(),
       userName: user.userName,
-      role: user.role,
-      profilePicture: user.profilePicture || "",
       memberColor: user.memberColor,
       availabilities: user.availabilities.map((availability) => ({
         start: availability.start,
@@ -37,20 +35,18 @@ function formatGroup(group) {
   };
 }
 
-async function createGroup(userName) {
+async function createGroup(userName, groupName) {
   const finalUserName = sanitizeName(userName);
   const userId = new mongoose.Types.ObjectId();
 
   const newGroup = new Group({
     groupId: crypto.randomBytes(16).toString("hex"),
-    groupName: DEFAULT_GROUP_NAME,
+    groupName: groupName,
     groupDescription: DEFAULT_GROUP_DESCRIPTION,
     users: [
       {
         userId,
         userName: finalUserName,
-        role: "Admin",
-        profilePicture: "",
         memberColor: buildMemberColor(0),
         availabilities: [],
       },
@@ -78,6 +74,58 @@ async function updateGroup(groupId, groupName, groupDescription) {
   return formatGroup(updatedGroup);
 }
 
+async function joinGroup(groupId, userName) {
+  const group = await Group.findOne({ groupId });
+  if (!group) {
+    return { message: "Group not found" };
+  }
+
+  const memberCount = group.users.length;
+
+  const finalUserName = sanitizeName(userName);
+  const userId = new mongoose.Types.ObjectId();
+  const updatedGroup = await Group.findOneAndUpdate(
+    { groupId },
+    {
+      $push: {
+        users: {
+          userId,
+          userName: finalUserName,
+          memberColor: buildMemberColor(memberCount),
+          availabilities: [],
+        },
+      },
+    },
+    { new: true },
+  );
+
+  if (!updatedGroup) {
+    return { message: "Group not found" };
+  }
+
+  return formatGroup(updatedGroup);
+}
+
+async function setUserAvailabilities(groupId, userName, availabilities) {
+  const group = await Group.findOne({ groupId });
+  if (!group) {
+    return { message: "Group not found" };
+  }
+
+  const user = group.users.find((u) => u.userName === userName);
+  if (!user) {
+    return { message: "User not found" };
+  }
+
+  const updatedGroup = await Group.findOneAndUpdate(
+    { groupId, "users.userName": userName },
+    { $set: { "users.$.availabilities": availabilities } },
+    { new: true },
+  );
+
+  return formatGroup(updatedGroup);
+}
+
 export const updateGroupResponse = async (req, res) => {
   try {
     const groupId = req.body.groupId;
@@ -96,15 +144,71 @@ export const updateGroupResponse = async (req, res) => {
   }
 };
 
-export const createGroupResponse = async (req, res) => {
+export const setUserAvailabilitiesResponse = async (req, res) => {
   try {
-    const userName = sanitizeName(req.body?.userName);
+    const groupId = req.body.groupId;
+    const userName = req.body.userName;
+    const availabilities = req.body.availabilities;
+
+    if (!groupId) {
+      return res.status(400).json({ message: "groupId is required" });
+    }
 
     if (!userName) {
       return res.status(400).json({ message: "userName is required" });
     }
 
-    const result = await createGroup(userName);
+    if (!availabilities) {
+      return res.status(400).json({ message: "userName is required" });
+    }
+
+    const result = await setUserAvailabilities(
+      groupId,
+      userName,
+      availabilities,
+    );
+    return res.status(201).json(result);
+  } catch (error) {
+    console.error("Failed to join group:", error);
+    return res.status(500).json({ message: "Failed to join group" });
+  }
+};
+
+export const joinGroupResponse = async (req, res) => {
+  try {
+    const groupId = req.body.groupId;
+    const userName = req.body.userName;
+
+    if (!groupId) {
+      return res.status(400).json({ message: "groupId is required" });
+    }
+
+    if (!userName) {
+      return res.status(400).json({ message: "userName is required" });
+    }
+
+    const result = await joinGroup(groupId, userName);
+    return res.status(201).json(result);
+  } catch (error) {
+    console.error("Failed to join group:", error);
+    return res.status(500).json({ message: "Failed to join group" });
+  }
+};
+
+export const createGroupResponse = async (req, res) => {
+  try {
+    const userName = sanitizeName(req.body?.userName);
+    const groupName = req.body?.groupName;
+
+    if (!userName) {
+      return res.status(400).json({ message: "userName is required" });
+    }
+
+    if (!groupName) {
+      return res.status(400).json({ message: "groupName is required" });
+    }
+
+    const result = await createGroup(userName, groupName);
     return res.status(201).json(result);
   } catch (error) {
     console.error("Failed to create group:", error);

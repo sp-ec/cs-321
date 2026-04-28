@@ -2,6 +2,8 @@ import { Link, useParams } from "react-router-dom";
 
 function Navbar() {
   const { groupId } = useParams();
+  const searchParams = new URLSearchParams(window.location.search);
+  const userName = searchParams.get("userName");
 
   if (!groupId) return null;
 
@@ -10,13 +12,13 @@ function Navbar() {
       <span className="text-xl">ezCalendar</span>
       <div className="flex flex-row gap-6 pr-4">
         <Link
-          to={`/${groupId}/calendar/`}
+          to={`/${groupId}/calendar?userName=${userName}`}
           className="text-sm text-zinc-300 hover:text-zinc-100"
         >
           Calendar
         </Link>
         <Link
-          to={`/${groupId}/members/`}
+          to={`/${groupId}/members?userName=${userName}`}
           className="text-sm text-zinc-300 hover:text-zinc-100"
         >
           Members

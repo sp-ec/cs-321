@@ -25,25 +25,27 @@ a:hover {
 }
 
 h1 {
-  font-size: 3.2em;
+  font-size: 2.2em;
   line-height: 1.1;
   text-align: center;
   padding-bottom: 50px;
 }
 
-h2, h3, h4{
-	text-align: center;
+h2,
+h3,
+h4 {
+  text-align: center;
 }
-p{
-	text-align: center;
-}
-
-div{
-	text-align:center;
+p {
+  text-align: center;
 }
 
-label{
-	font-size: 20px;
+div {
+  text-align: center;
+}
+
+label {
+  font-size: 20px;
 }
 
 button {
@@ -76,4 +78,16 @@ button:focus-visible {
   button {
     background-color: #f9f9f9;
   }
+}
+
+.join-group-button {
+  background-color: #27272a;
+  color: white;
+  border: 1px solid #3f3f46;
+  padding: 0.7rem 1.2rem;
+  border-radius: 10px;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease;
 }
