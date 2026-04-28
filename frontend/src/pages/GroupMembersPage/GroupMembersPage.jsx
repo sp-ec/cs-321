@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { FiEdit2 } from "react-icons/fi";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import "./GroupMembersPage.css";
 
 function GroupMembersPage() {
@@ -9,6 +9,41 @@ function GroupMembersPage() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [isEditingGroup, setIsEditingGroup] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+
+  const [groupData, setGroupData] = useState(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const checkGroupExists = async () => {
+      try {
+        const response = await fetch(
+          `http://localhost:3000/api/groups/fetch?groupId=${groupId}`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          },
+        );
+        if (!response.ok) {
+          //if 404/error, send back to home page
+          console.log("Group not found, redirecting to home page.");
+          navigate("/");
+        }
+
+        try {
+          const data = await response.json();
+          setGroupData(data);
+        } catch (error) {
+          console.error("Error parsing group data:", error);
+        }
+      } catch (error) {
+        navigate("/");
+      }
+    };
+    console.log("GroupID: ", groupId);
+    checkGroupExists();
+  }, [groupId, navigate]);
 
   const joinLink = useMemo(() => {
     if (!groupId) {
@@ -36,14 +71,30 @@ function GroupMembersPage() {
     }
 
     const subject = encodeURIComponent("Join this group");
-    const body = encodeURIComponent(
-      `Hi,
-
-Use this link to join:
-${joinLink}`,
-    );
+    const body = encodeURIComponent(`Hi, Use this link to join: ${joinLink}`);
 
     window.location.href = `mailto:${inviteEmail}?subject=${subject}&body=${body}`;
+  };
+
+  const handleSaveGroup = async () => {
+    try {
+      const response = await fetch(`http://localhost:3000/api/groups/update`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          groupId,
+          groupName: groupData?.groupName,
+          groupDescription: groupData?.groupDescription,
+        }),
+      });
+      if (response.ok) {
+        setIsEditingGroup(false);
+      }
+    } catch (error) {
+      console.error("Error saving group:", error);
+    }
   };
 
   return (
@@ -51,7 +102,10 @@ ${joinLink}`,
       <div className="group-members-wrapper">
         <div className="group-members-header">
           <h1 className="group-title">Members</h1>
-          <p>Group details and member cards will appear here once integration is connected.</p>
+          <p>
+            Group details and member cards will appear here once integration is
+            connected.
+          </p>
         </div>
 
         <div className="group-info-card">
@@ -59,39 +113,53 @@ ${joinLink}`,
             <div className="group-header-content">
               {isEditingGroup ? (
                 <>
-                  <input
-                    className="group-title-input"
-                    value=""
+                  <textarea
+                    className="mb-2 title-info-textarea"
+                    value={groupData?.groupName || ""}
                     placeholder="Group name"
-                    disabled
-                    readOnly
+                    onChange={(e) =>
+                      setGroupData({ ...groupData, groupName: e.target.value })
+                    }
                   />
                   <textarea
                     className="group-info-textarea group-description-input"
-                    value=""
+                    value={groupData?.groupDescription || ""}
                     placeholder="Group description"
-                    disabled
-                    readOnly
+                    onChange={(e) =>
+                      setGroupData({
+                        ...groupData,
+                        groupDescription: e.target.value,
+                      })
+                    }
                   />
                 </>
               ) : (
                 <>
-                  <h2 className="group-name-placeholder">Group name unavailable</h2>
+                  <h2 className="group-name-placeholder">
+                    {groupData?.groupName || "Group name loading..."}
+                  </h2>
                   <p className="group-description-text group-subtitle">
-                    Group description will load here when real group data is available.
+                    {groupData?.groupDescription ||
+                      "Group description unavailable."}
                   </p>
                 </>
               )}
             </div>
 
-            <div className="group-header-actions">
+            <div className="group-header-actions mt-4">
               <button
                 className="save-group-button"
                 type="button"
-                disabled
-                onClick={() => setIsEditingGroup((value) => !value)}
+                disabled={groupData == null}
+                onClick={() => {
+                  if (isEditingGroup) {
+                    handleSaveGroup();
+                  } else {
+                    setIsEditingGroup(true);
+                  }
+                }}
               >
-                Edit
+                {isEditingGroup ? "Save" : "Edit"}
               </button>
             </div>
           </div>
@@ -105,7 +173,9 @@ ${joinLink}`,
           <div className="members-grid">
             <div className="member-card member-card-empty">
               <div className="member-card-top">
-                <span className="role-badge role-badge-empty">Role unavailable</span>
+                <span className="role-badge role-badge-empty">
+                  Role unavailable
+                </span>
                 <button
                   className="member-edit-button"
                   type="button"
@@ -130,7 +200,11 @@ ${joinLink}`,
                     disabled
                     readOnly
                   />
-                  <button className="save-group-button member-save-button" type="button" disabled>
+                  <button
+                    className="save-group-button member-save-button"
+                    type="button"
+                    disabled
+                  >
                     Save Profile
                   </button>
                 </div>
@@ -158,8 +232,17 @@ ${joinLink}`,
             <div className="invite-panel members-invite-panel">
               <label className="invite-label">Join group link</label>
               <div className="invite-link-row">
-                <input className="invite-link-input" type="text" value={joinLink} readOnly />
-                <button className="invite-action-button" type="button" onClick={copyJoinLink}>
+                <input
+                  className="invite-link-input"
+                  type="text"
+                  value={joinLink}
+                  readOnly
+                />
+                <button
+                  className="invite-action-button"
+                  type="button"
+                  onClick={copyJoinLink}
+                >
                   Copy Link
                 </button>
               </div>
@@ -173,7 +256,11 @@ ${joinLink}`,
                   value={inviteEmail}
                   onChange={(event) => setInviteEmail(event.target.value)}
                 />
-                <button className="invite-action-button" type="button" onClick={handleSendInvite}>
+                <button
+                  className="invite-action-button"
+                  type="button"
+                  onClick={handleSendInvite}
+                >
                   Send Invite
                 </button>
               </div>

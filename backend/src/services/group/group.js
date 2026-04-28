@@ -64,6 +64,38 @@ async function createGroup(userName) {
   };
 }
 
+async function updateGroup(groupId, groupName, groupDescription) {
+  const updatedGroup = await Group.findOneAndUpdate(
+    { groupId },
+    { groupName, groupDescription },
+    { new: true },
+  );
+
+  if (!updatedGroup) {
+    return { message: "Group not found" };
+  }
+
+  return formatGroup(updatedGroup);
+}
+
+export const updateGroupResponse = async (req, res) => {
+  try {
+    const groupId = req.body.groupId;
+    const groupName = req.body.groupName;
+    const groupDescription = req.body.groupDescription;
+
+    if (!groupId) {
+      return res.status(400).json({ message: "groupId is required" });
+    }
+
+    const result = await updateGroup(groupId, groupName, groupDescription);
+    return res.status(201).json(result);
+  } catch (error) {
+    console.error("Failed to update group:", error);
+    return res.status(500).json({ message: "Failed to update group" });
+  }
+};
+
 export const createGroupResponse = async (req, res) => {
   try {
     const userName = sanitizeName(req.body?.userName);
