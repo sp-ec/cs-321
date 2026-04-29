@@ -17,13 +17,6 @@ const userSchema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, required: true },
     userName: { type: String, required: true, trim: true },
-    role: {
-      type: String,
-      enum: ["Admin", "Member"],
-      default: "Member",
-      required: true,
-    },
-    profilePicture: { type: String, default: "" },
     memberColor: { type: String, required: true },
     availabilities: [availabilitySchema],
   },
