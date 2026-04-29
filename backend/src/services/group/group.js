@@ -9,6 +9,10 @@ function sanitizeName(value) {
   return String(value || "").trim();
 }
 
+function sanitizeText(value) {
+  return typeof value === "string" ? value.trim() : value;
+}
+
 function normalizeUserName(value) {
   return sanitizeName(value).toLowerCase();
 }
@@ -31,6 +35,7 @@ function formatGroup(group) {
       userId: user.userId.toString(),
       userName: user.userName,
       role: user.role,
+      profilePicture: user.profilePicture,
       memberColor: user.memberColor,
       availabilities: user.availabilities.map((availability) => ({
         start: availability.start,
@@ -52,6 +57,7 @@ async function createGroup(userName, groupName) {
       {
         userId,
         userName: finalUserName,
+        role: "Admin",
         memberColor: buildMemberColor(0),
         availabilities: [],
       },
@@ -65,18 +71,72 @@ async function createGroup(userName, groupName) {
   };
 }
 
-async function updateGroup(groupId, groupName, groupDescription) {
-  const updatedGroup = await Group.findOneAndUpdate(
-    { groupId },
-    { groupName, groupDescription },
-    { new: true },
-  );
+function findUserById(group, userId) {
+  return group.users.find((user) => user.userId.toString() === String(userId));
+}
 
-  if (!updatedGroup) {
-    return { message: "Group not found" };
+function validateAvailabilities(availabilities) {
+  if (!Array.isArray(availabilities)) {
+    return { type: "invalid", message: "availabilities must be an array" };
   }
 
-  return formatGroup(updatedGroup);
+  const normalizedAvailabilities = [];
+
+  for (const availability of availabilities) {
+    const start = new Date(availability?.start);
+    const end = new Date(availability?.end);
+
+    if (
+      Number.isNaN(start.getTime()) ||
+      Number.isNaN(end.getTime()) ||
+      start >= end
+    ) {
+      return {
+        type: "invalid",
+        message: "Each availability must contain a valid start before end",
+      };
+    }
+
+    normalizedAvailabilities.push({ start, end });
+  }
+
+  return { type: "valid", availabilities: normalizedAvailabilities };
+}
+
+async function updateGroup(groupId, actingUserId, groupName, groupDescription) {
+  const group = await Group.findOne({ groupId });
+
+  if (!group) {
+    return { type: "not_found", message: "Group not found" };
+  }
+
+  const actingUser = findUserById(group, actingUserId);
+  if (!actingUser) {
+    return { type: "forbidden", message: "Only group admins can update group details" };
+  }
+
+  if (actingUser.role !== "Admin") {
+    return { type: "forbidden", message: "Only group admins can update group details" };
+  }
+
+  if (groupName !== undefined) {
+    const nextGroupName = sanitizeText(groupName);
+    if (!nextGroupName) {
+      return { type: "invalid", message: "groupName cannot be empty" };
+    }
+    group.groupName = nextGroupName;
+  }
+
+  if (groupDescription !== undefined) {
+    const nextGroupDescription = sanitizeText(groupDescription);
+    if (nextGroupDescription === undefined) {
+      return { type: "invalid", message: "groupDescription must be a string" };
+    }
+    group.groupDescription = nextGroupDescription;
+  }
+
+  const updatedGroup = await group.save();
+  return { type: "updated", group: formatGroup(updatedGroup) };
 }
 
 async function joinGroup(groupId, userName) {
@@ -103,6 +163,7 @@ async function joinGroup(groupId, userName) {
         users: {
           userId,
           userName: finalUserName,
+          role: "Member",
           memberColor: buildMemberColor(memberCount),
           availabilities: [],
         },
@@ -146,95 +207,290 @@ async function identifyGroupMember(groupId, userName) {
   };
 }
 
-async function setUserAvailabilities(groupId, userName, availabilities) {
+async function updateGroupMember(
+  groupId,
+  actingUserId,
+  userId,
+  userName,
+  profilePicture,
+) {
   const group = await Group.findOne({ groupId });
   if (!group) {
-    return { message: "Group not found" };
+    return { type: "not_found", message: "Group not found" };
   }
 
-  const user = group.users.find((u) => u.userName === userName);
-  if (!user) {
-    return { message: "User not found" };
+  const actingUser = findUserById(group, actingUserId);
+  const targetUser = findUserById(group, userId);
+
+  if (!actingUser || !targetUser) {
+    return { type: "not_found", message: "User not found" };
   }
 
-  const updatedGroup = await Group.findOneAndUpdate(
-    { groupId, "users.userName": userName },
-    { $set: { "users.$.availabilities": availabilities } },
-    { new: true },
-  );
+  if (actingUser.userId.toString() !== targetUser.userId.toString()) {
+    return { type: "forbidden", message: "You can only update your own member profile" };
+  }
 
-  return formatGroup(updatedGroup);
+  if (userName !== undefined) {
+    const nextUserName = sanitizeName(userName);
+    if (!nextUserName) {
+      return { type: "invalid", message: "userName cannot be empty" };
+    }
+
+    const duplicateUser = group.users.find(
+      (user) =>
+        user.userId.toString() !== targetUser.userId.toString() &&
+        normalizeUserName(user.userName) === normalizeUserName(nextUserName),
+    );
+
+    if (duplicateUser) {
+      return {
+        type: "duplicate_name",
+        message: "That name is already in use in this group.",
+      };
+    }
+
+    targetUser.userName = nextUserName;
+  }
+
+  if (profilePicture !== undefined) {
+    if (typeof profilePicture !== "string") {
+      return { type: "invalid", message: "profilePicture must be a string" };
+    }
+
+    targetUser.profilePicture = profilePicture;
+  }
+
+  const updatedGroup = await group.save();
+  return { type: "updated", group: formatGroup(updatedGroup) };
+}
+
+async function setUserAvailabilities(
+  groupId,
+  actingUserId,
+  userId,
+  availabilities,
+) {
+  const group = await Group.findOne({ groupId });
+  if (!group) {
+    return { type: "not_found", message: "Group not found" };
+  }
+
+  const actingUser = findUserById(group, actingUserId);
+  const targetUser = findUserById(group, userId);
+
+  if (!actingUser || !targetUser) {
+    return { type: "not_found", message: "User not found" };
+  }
+
+  if (actingUser.userId.toString() !== targetUser.userId.toString()) {
+    return { type: "forbidden", message: "You can only update your own availabilities" };
+  }
+
+  const validationResult = validateAvailabilities(availabilities);
+  if (validationResult.type === "invalid") {
+    return validationResult;
+  }
+
+  targetUser.availabilities = validationResult.availabilities;
+  const updatedGroup = await group.save();
+  return { type: "updated", group: formatGroup(updatedGroup) };
 }
 
 export const updateGroupResponse = async (req, res) => {
   try {
     const groupId = req.body.groupId;
+    const actingUserId = req.body.actingUserId;
     const groupName = req.body.groupName;
     const groupDescription = req.body.groupDescription;
 
     if (!groupId) {
-      return res.status(400).json({ message: "groupId is required" });
+      return res.status(400).json({ code: "VALIDATION_ERROR", message: "groupId is required" });
     }
 
-    const result = await updateGroup(groupId, groupName, groupDescription);
-    return res.status(201).json(result);
+    if (!actingUserId) {
+      return res.status(400).json({
+        code: "VALIDATION_ERROR",
+        message: "actingUserId is required",
+      });
+    }
+
+    if (groupName === undefined && groupDescription === undefined) {
+      return res.status(400).json({
+        code: "VALIDATION_ERROR",
+        message: "At least one of groupName or groupDescription is required",
+      });
+    }
+
+    const result = await updateGroup(
+      groupId,
+      actingUserId,
+      groupName,
+      groupDescription,
+    );
+
+    if (result.type === "not_found") {
+      return res.status(404).json({ code: "GROUP_NOT_FOUND", message: result.message });
+    }
+
+    if (result.type === "forbidden") {
+      return res.status(403).json({ code: "FORBIDDEN", message: result.message });
+    }
+
+    if (result.type === "invalid") {
+      return res.status(400).json({ code: "VALIDATION_ERROR", message: result.message });
+    }
+
+    return res.status(200).json(result);
   } catch (error) {
     console.error("Failed to update group:", error);
-    return res.status(500).json({ message: "Failed to update group" });
+    return res.status(500).json({ code: "INTERNAL_ERROR", message: "Failed to update group" });
   }
 };
 
 export const setUserAvailabilitiesResponse = async (req, res) => {
   try {
     const groupId = req.body.groupId;
-    const userName = req.body.userName;
+    const actingUserId = req.body.actingUserId;
+    const userId = req.body.userId;
     const availabilities = req.body.availabilities;
 
     if (!groupId) {
-      return res.status(400).json({ message: "groupId is required" });
+      return res.status(400).json({ code: "VALIDATION_ERROR", message: "groupId is required" });
     }
 
-    if (!userName) {
-      return res.status(400).json({ message: "userName is required" });
+    if (!actingUserId) {
+      return res.status(400).json({
+        code: "VALIDATION_ERROR",
+        message: "actingUserId is required",
+      });
     }
 
-    if (!availabilities) {
-      return res.status(400).json({ message: "userName is required" });
+    if (!userId) {
+      return res.status(400).json({ code: "VALIDATION_ERROR", message: "userId is required" });
+    }
+
+    if (!Array.isArray(availabilities)) {
+      return res.status(400).json({
+        code: "VALIDATION_ERROR",
+        message: "availabilities must be an array",
+      });
     }
 
     const result = await setUserAvailabilities(
       groupId,
-      userName,
+      actingUserId,
+      userId,
       availabilities,
     );
-    return res.status(201).json(result);
+
+    if (result.type === "not_found") {
+      return res.status(404).json({ code: "NOT_FOUND", message: result.message });
+    }
+
+    if (result.type === "forbidden") {
+      return res.status(403).json({ code: "FORBIDDEN", message: result.message });
+    }
+
+    if (result.type === "invalid") {
+      return res.status(400).json({ code: "VALIDATION_ERROR", message: result.message });
+    }
+
+    return res.status(200).json(result);
   } catch (error) {
-    console.error("Failed to join group:", error);
-    return res.status(500).json({ message: "Failed to join group" });
+    console.error("Failed to update availabilities:", error);
+    return res.status(500).json({
+      code: "INTERNAL_ERROR",
+      message: "Failed to update availabilities",
+    });
+  }
+};
+
+export const updateGroupMemberResponse = async (req, res) => {
+  try {
+    const groupId = req.body.groupId;
+    const actingUserId = req.body.actingUserId;
+    const userId = req.body.userId;
+    const userName = req.body.userName;
+    const profilePicture = req.body.profilePicture;
+
+    if (!groupId) {
+      return res.status(400).json({ code: "VALIDATION_ERROR", message: "groupId is required" });
+    }
+
+    if (!actingUserId) {
+      return res.status(400).json({
+        code: "VALIDATION_ERROR",
+        message: "actingUserId is required",
+      });
+    }
+
+    if (!userId) {
+      return res.status(400).json({ code: "VALIDATION_ERROR", message: "userId is required" });
+    }
+
+    if (userName === undefined && profilePicture === undefined) {
+      return res.status(400).json({
+        code: "VALIDATION_ERROR",
+        message: "At least one of userName or profilePicture is required",
+      });
+    }
+
+    const result = await updateGroupMember(
+      groupId,
+      actingUserId,
+      userId,
+      userName,
+      profilePicture,
+    );
+
+    if (result.type === "not_found") {
+      return res.status(404).json({ code: "NOT_FOUND", message: result.message });
+    }
+
+    if (result.type === "forbidden") {
+      return res.status(403).json({ code: "FORBIDDEN", message: result.message });
+    }
+
+    if (result.type === "duplicate_name") {
+      return res.status(409).json({ code: "DUPLICATE_NAME", message: result.message });
+    }
+
+    if (result.type === "invalid") {
+      return res.status(400).json({ code: "VALIDATION_ERROR", message: result.message });
+    }
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Failed to update member:", error);
+    return res.status(500).json({
+      code: "INTERNAL_ERROR",
+      message: "Failed to update member",
+    });
   }
 };
 
 export const joinGroupResponse = async (req, res) => {
   try {
     const groupId = req.body.groupId;
-    const userName = req.body.userName;
+    const userName = sanitizeName(req.body.userName);
 
     if (!groupId) {
-      return res.status(400).json({ message: "groupId is required" });
+      return res.status(400).json({ code: "VALIDATION_ERROR", message: "groupId is required" });
     }
 
     if (!userName) {
-      return res.status(400).json({ message: "userName is required" });
+      return res.status(400).json({ code: "VALIDATION_ERROR", message: "userName is required" });
     }
 
     const result = await joinGroup(groupId, userName);
 
     if (result.type === "not_found") {
-      return res.status(404).json({ message: "Group not found" });
+      return res.status(404).json({ code: "GROUP_NOT_FOUND", message: "Group not found" });
     }
 
     if (result.type === "duplicate_name") {
       return res.status(409).json({
+        code: "DUPLICATE_NAME",
         message: "That name is already in use in this group.",
       });
     }
@@ -242,27 +498,27 @@ export const joinGroupResponse = async (req, res) => {
     return res.status(201).json(result);
   } catch (error) {
     console.error("Failed to join group:", error);
-    return res.status(500).json({ message: "Failed to join group" });
+    return res.status(500).json({ code: "INTERNAL_ERROR", message: "Failed to join group" });
   }
 };
 
 export const identifyGroupMemberResponse = async (req, res) => {
   try {
     const groupId = req.body.groupId;
-    const userName = req.body.userName;
+    const userName = sanitizeName(req.body.userName);
 
     if (!groupId) {
-      return res.status(400).json({ message: "groupId is required" });
+      return res.status(400).json({ code: "VALIDATION_ERROR", message: "groupId is required" });
     }
 
     if (!userName) {
-      return res.status(400).json({ message: "userName is required" });
+      return res.status(400).json({ code: "VALIDATION_ERROR", message: "userName is required" });
     }
 
     const result = await identifyGroupMember(groupId, userName);
 
     if (result.type === "not_found") {
-      return res.status(404).json({ message: "Group not found" });
+      return res.status(404).json({ code: "GROUP_NOT_FOUND", message: "Group not found" });
     }
 
     if (result.type === "no_match") {
@@ -272,28 +528,31 @@ export const identifyGroupMemberResponse = async (req, res) => {
     return res.status(200).json(result);
   } catch (error) {
     console.error("Failed to identify group member:", error);
-    return res.status(500).json({ message: "Failed to identify group member" });
+    return res.status(500).json({
+      code: "INTERNAL_ERROR",
+      message: "Failed to identify group member",
+    });
   }
 };
 
 export const createGroupResponse = async (req, res) => {
   try {
     const userName = sanitizeName(req.body?.userName);
-    const groupName = req.body?.groupName;
+    const groupName = sanitizeText(req.body?.groupName);
 
     if (!userName) {
-      return res.status(400).json({ message: "userName is required" });
+      return res.status(400).json({ code: "VALIDATION_ERROR", message: "userName is required" });
     }
 
     if (!groupName) {
-      return res.status(400).json({ message: "groupName is required" });
+      return res.status(400).json({ code: "VALIDATION_ERROR", message: "groupName is required" });
     }
 
     const result = await createGroup(userName, groupName);
     return res.status(201).json(result);
   } catch (error) {
     console.error("Failed to create group:", error);
-    return res.status(500).json({ message: "Failed to create group" });
+    return res.status(500).json({ code: "INTERNAL_ERROR", message: "Failed to create group" });
   }
 };
 
@@ -304,18 +563,18 @@ export const fetchGroupResponse = async (req, res) => {
     if (!groupId) {
       return res
         .status(400)
-        .json({ message: "groupId query parameter is required" });
+        .json({ code: "VALIDATION_ERROR", message: "groupId query parameter is required" });
     }
 
     const group = await Group.findOne({ groupId }).lean();
 
     if (!group) {
-      return res.status(404).json({ message: "Group not found" });
+      return res.status(404).json({ code: "GROUP_NOT_FOUND", message: "Group not found" });
     }
 
     return res.json(formatGroup(group));
   } catch (error) {
     console.error("Failed to fetch group:", error);
-    return res.status(500).json({ message: "Failed to fetch group" });
+    return res.status(500).json({ code: "INTERNAL_ERROR", message: "Failed to fetch group" });
   }
 };
