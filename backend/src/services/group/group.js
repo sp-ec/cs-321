@@ -9,6 +9,10 @@ function sanitizeName(value) {
   return String(value || "").trim();
 }
 
+function normalizeUserName(value) {
+  return sanitizeName(value).toLowerCase();
+}
+
 function buildMemberColor(memberCount) {
   const hue = Math.round((memberCount * 137.508) % 360);
   return `hsl(${hue},70%,55%)`;
@@ -26,6 +30,7 @@ function formatGroup(group) {
     users: group.users.map((user) => ({
       userId: user.userId.toString(),
       userName: user.userName,
+      role: user.role,
       memberColor: user.memberColor,
       availabilities: user.availabilities.map((availability) => ({
         start: availability.start,
@@ -77,12 +82,19 @@ async function updateGroup(groupId, groupName, groupDescription) {
 async function joinGroup(groupId, userName) {
   const group = await Group.findOne({ groupId });
   if (!group) {
-    return { message: "Group not found" };
+    return { type: "not_found" };
   }
 
   const memberCount = group.users.length;
-
   const finalUserName = sanitizeName(userName);
+  const duplicateUser = group.users.find(
+    (user) => normalizeUserName(user.userName) === normalizeUserName(finalUserName),
+  );
+
+  if (duplicateUser) {
+    return { type: "duplicate_name" };
+  }
+
   const userId = new mongoose.Types.ObjectId();
   const updatedGroup = await Group.findOneAndUpdate(
     { groupId },
@@ -100,10 +112,38 @@ async function joinGroup(groupId, userName) {
   );
 
   if (!updatedGroup) {
-    return { message: "Group not found" };
+    return { type: "not_found" };
   }
 
-  return formatGroup(updatedGroup);
+  return {
+    type: "joined",
+    group: formatGroup(updatedGroup),
+    currentUserId: userId.toString(),
+  };
+}
+
+async function identifyGroupMember(groupId, userName) {
+  const group = await Group.findOne({ groupId });
+
+  if (!group) {
+    return { type: "not_found" };
+  }
+
+  const finalUserName = sanitizeName(userName);
+  const matchedUser = group.users.find(
+    (user) => normalizeUserName(user.userName) === normalizeUserName(finalUserName),
+  );
+
+  if (!matchedUser) {
+    return { type: "no_match", matched: false };
+  }
+
+  return {
+    type: "matched",
+    matched: true,
+    currentUserId: matchedUser.userId.toString(),
+    group: formatGroup(group),
+  };
 }
 
 async function setUserAvailabilities(groupId, userName, availabilities) {
@@ -188,10 +228,51 @@ export const joinGroupResponse = async (req, res) => {
     }
 
     const result = await joinGroup(groupId, userName);
+
+    if (result.type === "not_found") {
+      return res.status(404).json({ message: "Group not found" });
+    }
+
+    if (result.type === "duplicate_name") {
+      return res.status(409).json({
+        message: "That name is already in use in this group.",
+      });
+    }
+
     return res.status(201).json(result);
   } catch (error) {
     console.error("Failed to join group:", error);
     return res.status(500).json({ message: "Failed to join group" });
+  }
+};
+
+export const identifyGroupMemberResponse = async (req, res) => {
+  try {
+    const groupId = req.body.groupId;
+    const userName = req.body.userName;
+
+    if (!groupId) {
+      return res.status(400).json({ message: "groupId is required" });
+    }
+
+    if (!userName) {
+      return res.status(400).json({ message: "userName is required" });
+    }
+
+    const result = await identifyGroupMember(groupId, userName);
+
+    if (result.type === "not_found") {
+      return res.status(404).json({ message: "Group not found" });
+    }
+
+    if (result.type === "no_match") {
+      return res.status(200).json({ matched: false });
+    }
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Failed to identify group member:", error);
+    return res.status(500).json({ message: "Failed to identify group member" });
   }
 };
 
