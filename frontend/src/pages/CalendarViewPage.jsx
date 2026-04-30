@@ -235,13 +235,17 @@ function CalendarViewPage() {
         const isCurrentUser = user.userId === currentUser?.userId;
         const sourceEvents = isCurrentUser ? events : user.availabilities || [];
 
+        const bgOpacity = "80%";
+        const borderOpacity = "100%";
+
         return sourceEvents.map((event, index) => ({
           id: isCurrentUser ? event.id : `${user.userId}-${index}`,
           start: event.start,
           end: event.end,
           title: user.userName,
-          backgroundColor: `color-mix(in srgb, ${user.memberColor} 80%, transparent)`,
-          borderColor: `color-mix(in srgb, ${user.memberColor} 100%, transparent)`,
+          backgroundColor: `color-mix(in srgb, ${user.memberColor} ${bgOpacity}, transparent)`,
+          borderColor: `color-mix(in srgb, ${user.memberColor} ${borderOpacity}, transparent)`,
+          priority: isCurrentUser ? 1 : 2,
           extendedProps: {
             isCurrentUser,
           },
@@ -317,6 +321,7 @@ function CalendarViewPage() {
         <FullCalendar
           ref={calendarRef}
           plugins={[timeGridPlugin, interactionPlugin, dayGridPlugin]}
+          eventOrder="priority"
           initialView="timeGridWeek"
           contentHeight="auto"
           slotDuration="00:30:00"

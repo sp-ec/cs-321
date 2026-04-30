@@ -61,7 +61,7 @@ function JoinGroupPage() {
         userId: result.currentUserId,
         userName: joinedMember?.userName || userName.trim(),
       });
-      navigate(`/${groupId}/members`);
+      navigate(`/${groupId}/calendar`);
     } catch (error) {
       if (error.status === 409) {
         setErrorMessage("That name is already taken in this group.");
