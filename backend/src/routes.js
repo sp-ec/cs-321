@@ -18,4 +18,4 @@ router.patch("/groups/availability", setUserAvailabilitiesResponse);
 router.get("/groups/fetch", fetchGroupResponse);
 router.post("/user/availability", setUserAvailabilitiesResponse);
 
-export default router;any
+export default router;
