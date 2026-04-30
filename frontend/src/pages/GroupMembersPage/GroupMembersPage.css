@@ -335,60 +335,6 @@
   line-height: 1.4;
 }
 
-.member-card-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.member-edit-button {
-  width: 32px;
-  height: 32px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  border: 1px solid #3f3f46;
-  background: #0f0f11;
-  color: #d4d4d8;
-  padding: 0;
-}
-
-/* Role Badge */
-.role-badge {
-  display: inline-block;
-  padding: 0.3rem 0.75rem;
-  border-radius: 999px;
-  font-size: 0.85rem;
-  margin-bottom: 1rem;
-  font-weight: 600;
-}
-
-.role-owner {
-  background-color: rgba(245, 158, 11, 0.2);
-  color: #fcd34d;
-  border: 1px solid rgba(245, 158, 11, 0.3);
-}
-
-.role-admin {
-  background-color: rgba(59, 130, 246, 0.2);
-  color: #93c5fd;
-  border: 1px solid rgba(59, 130, 246, 0.3);
-}
-
-.role-member {
-  background-color: #27272a;
-  color: #d4d4d8;
-  border: 1px solid #3f3f46;
-}
-
-.role-badge-empty {
-  background-color: #27272a;
-  color: #a1a1aa;
-  border: 1px solid #3f3f46;
-}
-
 /* Profile */
 .profile-container {
   width: 110px;
@@ -438,6 +384,12 @@
   word-break: break-word;
 }
 
+.member-status-label {
+  margin: 0.4rem 0 0;
+  color: #d4d4d8;
+  font-size: 0.9rem;
+}
+
 .member-name-empty {
   color: #a1a1aa;
   line-height: 1.5;
@@ -460,6 +412,26 @@
   margin: 1rem 0 0;
   text-align: center;
   color: #a1a1aa;
+}
+
+.members-status-error,
+.members-status-notice {
+  margin: 0 0 1rem;
+  text-align: center;
+}
+
+.members-status-error {
+  color: #fda4af;
+}
+
+.members-status-notice {
+  color: #86efac;
+}
+
+.member-meta {
+  margin: 0.5rem 0 0;
+  color: #a1a1aa;
+  font-size: 0.9rem;
 }
 
 /* Add Member Card */

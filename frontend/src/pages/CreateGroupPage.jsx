@@ -1,58 +1,40 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { createGroup } from "../lib/api";
+import { saveGroupSession } from "../lib/groupSession";
 
 function CreateGroupPage() {
-  const adjectives = ["calm", "quick", "blue", "smart", "bright"];
-  const nouns = ["fox", "star", "cloud", "group", "team"];
-
-  const randomUsername = useMemo(() => {
-    const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
-    const noun = nouns[Math.floor(Math.random() * nouns.length)];
-    const number = Math.floor(100 + Math.random() * 900);
-    return `${adjective}${noun}${number}`;
-  }, []);
-
   const [groupName, setGroupName] = useState("");
   const [username, setUsername] = useState("");
   const [createdGroup, setCreatedGroup] = useState(null);
   const [groupLink, setGroupLink] = useState("");
-
-  //   const handleCreateGroup = (e) => {
-  //     e.preventDefault();
-
-  //     const finalUsername = username.trim() || randomUsername;
-  //     const groupId = Math.random().toString(36).slice(2, 8);
-
-  //     setCreatedName(finalUsername);
-  //     setGroupLink(`http://localhost:5173/${groupId}/join`);
-  //   };
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
 
   const handleCreateGroup = async (e) => {
     e.preventDefault();
+    setErrorMessage("");
+    setIsSubmitting(true);
+
     try {
-      const response = await fetch(`http://localhost:3000/api/groups/create`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          groupName: groupName,
-          userName: username,
-        }),
+      const data = await createGroup({
+        groupName,
+        userName: username,
       });
-      if (response.ok) {
-        const data = await response.json();
-        setCreatedGroup(data);
-        setGroupLink(`http://localhost:5173/${data.group.groupId}/join`);
-      } else {
-        console.error("Failed to create group:", response.statusText);
-      }
+
+      saveGroupSession(data.group.groupId, {
+        userId: data.currentUserId,
+        userName: data.group.users[0]?.userName || username.trim(),
+      });
+      setCreatedGroup(data);
+      setGroupLink(`${window.location.origin}/${data.group.groupId}/join`);
     } catch (error) {
-      console.error("Error joining group:", error);
+      setErrorMessage(error.message || "Unable to create group.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
-
-  const navigate = useNavigate();
 
   return (
     <div style={styles.page} className="flex flex-col gap-y-16">
@@ -72,7 +54,7 @@ function CreateGroupPage() {
           <label style={styles.text}>Your Name</label>
           <input
             type="text"
-            placeholder={"Your Name"}
+            placeholder="Your Name"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             style={styles.input}
@@ -81,11 +63,13 @@ function CreateGroupPage() {
             type="submit"
             style={styles.button}
             className="save-group-button"
-            disabled={!groupName.trim() || !username.trim()}
+            disabled={!groupName.trim() || !username.trim() || isSubmitting}
           >
-            Create Group
+            {isSubmitting ? "Creating..." : "Create Group"}
           </button>
         </form>
+
+        {errorMessage ? <p style={styles.errorText}>{errorMessage}</p> : null}
 
         {createdGroup && (
           <>
@@ -94,8 +78,7 @@ function CreateGroupPage() {
                 <strong>Group Name:</strong> {createdGroup.group.groupName}
               </p>
               <p style={styles.resultText}>
-                <strong>Username:</strong>{" "}
-                {createdGroup.group.users[0].userName}
+                <strong>Username:</strong> {createdGroup.group.users[0].userName}
               </p>
               <p style={styles.resultText}>
                 <strong>Share link:</strong>
@@ -110,14 +93,10 @@ function CreateGroupPage() {
               </a>
             </div>
             <button
-              type="submit"
+              type="button"
               style={styles.button}
               className="mt-6"
-              onClick={() =>
-                navigate(
-                  `/${createdGroup.group.groupId}/calendar?userName=${createdGroup.group.users[0].userName}`,
-                )
-              }
+              onClick={() => navigate(`/${createdGroup.group.groupId}/calendar`)}
             >
               Go to Group Calendar
             </button>
@@ -187,6 +166,11 @@ const styles = {
     margin: "0 0 8px 0",
     fontSize: "14px",
     color: "#ffffff",
+  },
+  errorText: {
+    marginTop: "12px",
+    fontSize: "14px",
+    color: "#fda4af",
   },
   link: {
     margin: 0,

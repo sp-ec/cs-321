@@ -80,6 +80,20 @@ button:focus-visible {
   }
 }
 
+.join-group-error {
+  margin-top: 1rem;
+  color: #fda4af;
+  font-size: 0.95rem;
+}
+
+.join-group-select {
+  color: #ffffff;
+}
+
+.join-group-select option {
+  color: #000000;
+}
+
 .join-group-button {
   background-color: #27272a;
   color: white;

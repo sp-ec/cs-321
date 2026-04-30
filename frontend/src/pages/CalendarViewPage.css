@@ -61,3 +61,14 @@
 .user-badge::before {
   opacity: 0.5;
 }
+
+.calendar-error-message {
+  margin-bottom: 1rem;
+  color: #fda4af;
+  text-align: center;
+}
+
+.fc .fc-timegrid-col-events .fc-timegrid-event-harness {
+  inset-inline-start: 0 !important;
+  inset-inline-end: 0 !important;
+}

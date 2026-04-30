@@ -1,48 +1,59 @@
-import React, { useMemo, useState, useEffect } from "react";
-import { FiEdit2 } from "react-icons/fi";
-import { useParams, useNavigate } from "react-router-dom";
+import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import "./GroupMembersPage.css";
+import { fetchGroup, updateGroup } from "../../lib/api";
+import {
+  clearGroupSession,
+  findSessionMember,
+  getGroupSession,
+} from "../../lib/groupSession";
+import { getAvatarStyle, getInitials } from "../../lib/avatar";
 
 function GroupMembersPage() {
   const { groupId } = useParams();
   const [showInvitePanel, setShowInvitePanel] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [isEditingGroup, setIsEditingGroup] = useState(false);
-  const [isEditingProfile, setIsEditingProfile] = useState(false);
-
   const [groupData, setGroupData] = useState(null);
+  const [currentMember, setCurrentMember] = useState(null);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [noticeMessage, setNoticeMessage] = useState("");
+  const [isSavingGroup, setIsSavingGroup] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const checkGroupExists = async () => {
+    const loadGroup = async () => {
+      const session = getGroupSession(groupId);
+
+      if (!session) {
+        navigate(`/${groupId}/join`, {
+          replace: true,
+          state: { message: "Join or select your name to access this group." },
+        });
+        return;
+      }
+
       try {
-        const response = await fetch(
-          `http://localhost:3000/api/groups/fetch?groupId=${groupId}`,
-          {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-            },
-          },
-        );
-        if (!response.ok) {
-          //if 404/error, send back to home page
-          console.log("Group not found, redirecting to home page.");
-          navigate("/");
+        const data = await fetchGroup(groupId);
+        const member = findSessionMember(data, session);
+
+        if (!member) {
+          clearGroupSession(groupId);
+          navigate(`/${groupId}/join`, {
+            replace: true,
+            state: { message: "Select your name again to continue." },
+          });
+          return;
         }
 
-        try {
-          const data = await response.json();
-          setGroupData(data);
-        } catch (error) {
-          console.error("Error parsing group data:", error);
-        }
-      } catch (error) {
+        setGroupData(data);
+        setCurrentMember(member);
+      } catch {
         navigate("/");
       }
     };
-    console.log("GroupID: ", groupId);
-    checkGroupExists();
+
+    loadGroup();
   }, [groupId, navigate]);
 
   const joinLink = useMemo(() => {
@@ -60,13 +71,16 @@ function GroupMembersPage() {
 
     try {
       await navigator.clipboard.writeText(joinLink);
+      setNoticeMessage("Join link copied.");
+      setErrorMessage("");
     } catch {
-      // UI shell only: no error surface yet.
+      setErrorMessage("Unable to copy the join link.");
     }
   };
 
   const handleSendInvite = () => {
     if (!inviteEmail.trim() || !joinLink) {
+      setErrorMessage("Enter an email address before sending an invite.");
       return;
     }
 
@@ -77,35 +91,45 @@ function GroupMembersPage() {
   };
 
   const handleSaveGroup = async () => {
+    if (!currentMember) {
+      setErrorMessage("Sign back into the group before editing.");
+      return;
+    }
+
+    setIsSavingGroup(true);
+    setErrorMessage("");
+    setNoticeMessage("");
+
     try {
-      const response = await fetch(`http://localhost:3000/api/groups/update`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          groupId,
-          groupName: groupData?.groupName,
-          groupDescription: groupData?.groupDescription,
-        }),
+      const result = await updateGroup({
+        groupId,
+        actingUserId: currentMember.userId,
+        groupName: groupData?.groupName,
+        groupDescription: groupData?.groupDescription,
       });
-      if (response.ok) {
-        setIsEditingGroup(false);
-      }
+
+      setGroupData(result.group);
+      setCurrentMember(
+        result.group.users.find((user) => user.userId === currentMember.userId) ||
+          currentMember,
+      );
+      setIsEditingGroup(false);
+      setNoticeMessage("Group details saved.");
     } catch (error) {
-      console.error("Error saving group:", error);
+      setErrorMessage(error.message || "Unable to save group details.");
+    } finally {
+      setIsSavingGroup(false);
     }
   };
+
+  const members = groupData?.users || [];
 
   return (
     <div className="group-members-container">
       <div className="group-members-wrapper">
         <div className="group-members-header">
           <h1 className="group-title">Members</h1>
-          <p>
-            Group details and member cards will appear here once integration is
-            connected.
-          </p>
+          <p>Manage group details and see everyone currently in this group.</p>
         </div>
 
         <div className="group-info-card">
@@ -150,20 +174,31 @@ function GroupMembersPage() {
               <button
                 className="save-group-button"
                 type="button"
-                disabled={groupData == null}
+                disabled={groupData == null || isSavingGroup}
                 onClick={() => {
                   if (isEditingGroup) {
                     handleSaveGroup();
                   } else {
+                    setErrorMessage("");
+                    setNoticeMessage("");
                     setIsEditingGroup(true);
                   }
                 }}
               >
-                {isEditingGroup ? "Save" : "Edit"}
+                {isEditingGroup
+                  ? isSavingGroup
+                    ? "Saving..."
+                    : "Save"
+                  : "Edit"}
               </button>
             </div>
           </div>
         </div>
+
+        {errorMessage ? <p className="members-status-error">{errorMessage}</p> : null}
+        {noticeMessage ? (
+          <p className="members-status-notice">{noticeMessage}</p>
+        ) : null}
 
         <div className="members-section">
           <div className="section-heading-row">
@@ -171,49 +206,30 @@ function GroupMembersPage() {
           </div>
 
           <div className="members-grid">
-            <div className="member-card member-card-empty">
-              <div className="member-card-top">
-                <span className="role-badge role-badge-empty">
-                  Role unavailable
-                </span>
-                <button
-                  className="member-edit-button"
-                  type="button"
-                  aria-label="Edit profile"
-                  disabled
-                  onClick={() => setIsEditingProfile((value) => !value)}
-                >
-                  <FiEdit2 size={16} />
-                </button>
-              </div>
-
-              <div className="profile-container profile-container-empty">
-                <div className="profile-empty-circle">No Image</div>
-              </div>
-
-              {isEditingProfile ? (
-                <div className="member-editor">
-                  <input
-                    className="group-info-input"
-                    value=""
-                    placeholder="Username"
-                    disabled
-                    readOnly
-                  />
-                  <button
-                    className="save-group-button member-save-button"
-                    type="button"
-                    disabled
+            {members.map((member) => {
+              const isCurrentMember = member.userId === currentMember?.userId;
+              return (
+                <div className="member-card" key={member.userId}>
+                  <div
+                    className="profile-container"
+                    style={getAvatarStyle(member.memberColor)}
                   >
-                    Save Profile
-                  </button>
+                    <div className="profile-initials">
+                      {getInitials(member.userName)}
+                    </div>
+                  </div>
+
+                  <div className="member-name">{member.userName}</div>
+                  <p className="member-status-label">
+                    {isCurrentMember ? "Current member" : "Group member"}
+                  </p>
+                  <p className="member-meta">
+                    {member.availabilities?.length || 0} availability block
+                    {(member.availabilities?.length || 0) === 1 ? "" : "s"}
+                  </p>
                 </div>
-              ) : (
-                <div className="member-name member-name-empty">
-                  Member cards will appear here after data integration.
-                </div>
-              )}
-            </div>
+              );
+            })}
 
             <button
               className="member-card invite-member-card"
@@ -266,10 +282,6 @@ function GroupMembersPage() {
               </div>
             </div>
           )}
-
-          <p className="members-empty-message">
-            No real member data is connected in this version of the page.
-          </p>
         </div>
       </div>
     </div>

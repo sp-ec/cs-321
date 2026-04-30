@@ -1,68 +1,75 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import "./JoinGroupPage.css";
-import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { fetchGroup, joinGroup } from "../lib/api";
+import { saveGroupSession } from "../lib/groupSession";
 
 function JoinGroupPage() {
   const { groupId } = useParams();
   const [groupData, setGroupData] = useState(null);
   const [userName, setUserName] = useState("");
-  const [selectedUser, setSelectedUser] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
-    const checkGroupExists = async () => {
+    const loadGroup = async () => {
       try {
-        const response = await fetch(
-          `http://localhost:3000/api/groups/fetch?groupId=${groupId}`,
-          {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-            },
-          },
-        );
-        if (!response.ok) {
-          //if 404/error, send back to home page
-          console.log("Group not found, redirecting to home page.");
-          navigate("/");
-        }
-
-        try {
-          const data = await response.json();
-          setGroupData(data);
-        } catch (error) {
-          console.error("Error parsing group data:", error);
-        }
-      } catch (error) {
+        const data = await fetchGroup(groupId);
+        setGroupData(data);
+        setErrorMessage(location.state?.message || "");
+      } catch {
         navigate("/");
       }
     };
-    console.log("GroupID: ", groupId);
-    checkGroupExists();
-  }, [groupId, navigate]);
+
+    loadGroup();
+  }, [groupId, location.state, navigate]);
 
   const handleJoinGroup = async () => {
-    if (selectedUser) {
-      navigate(`/${groupId}/calendar?userName=${selectedUser}`);
-    } else {
-      try {
-        const response = await fetch(`http://localhost:3000/api/groups/join`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            groupId,
-            userName: userName,
-          }),
-        });
-        if (response.ok) {
-          navigate(`/${groupId}/calendar?userName=${userName}`);
-        }
-      } catch (error) {
-        console.error("Error joining group:", error);
+    setErrorMessage("");
+
+    if (selectedUserId) {
+      const selectedMember = groupData?.users.find(
+        (user) => user.userId === selectedUserId,
+      );
+
+      if (!selectedMember) {
+        setErrorMessage("Select a valid returning member.");
+        return;
       }
+
+      saveGroupSession(groupId, selectedMember);
+      navigate(`/${groupId}/calendar`);
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const result = await joinGroup({
+        groupId,
+        userName,
+      });
+      const joinedMember =
+        result.group?.users.find((user) => user.userId === result.currentUserId) ||
+        result.group?.users.find((user) => user.userName === userName.trim());
+
+      saveGroupSession(groupId, {
+        userId: result.currentUserId,
+        userName: joinedMember?.userName || userName.trim(),
+      });
+      navigate(`/${groupId}/members`);
+    } catch (error) {
+      if (error.status === 409) {
+        setErrorMessage("That name is already taken in this group.");
+      } else {
+        setErrorMessage(error.message || "Unable to join group.");
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -79,22 +86,33 @@ function JoinGroupPage() {
           placeholder="Enter your name"
           className="border px-4 py-2 rounded"
           value={userName}
-          onChange={(e) => setUserName(e.target.value)}
+          onChange={(e) => {
+            setUserName(e.target.value);
+            if (selectedUserId) {
+              setSelectedUserId("");
+            }
+          }}
         />
         <p className="mt-8">or if you've already joined, select your name:</p>
         <select
-          className="border px-4 py-2 rounded mt-8"
-          value={selectedUser}
-          onChange={(e) => setSelectedUser(e.target.value)}
+          className="border px-4 py-2 rounded mt-8 join-group-select"
+          value={selectedUserId}
+          onChange={(e) => {
+            setSelectedUserId(e.target.value);
+            if (e.target.value) {
+              setUserName("");
+            }
+          }}
         >
           <option value="">Select your name</option>
           {groupData?.users.map((user) => (
-            <option key={user.userId} value={user.userName}>
+            <option key={user.userId} value={user.userId}>
               {user.userName}
             </option>
           ))}
         </select>
       </div>
+      {errorMessage ? <p className="join-group-error">{errorMessage}</p> : null}
       <br />
       <div>
         <button
@@ -102,11 +120,14 @@ function JoinGroupPage() {
           className="save-group-button"
           type="button"
           onClick={handleJoinGroup}
-          disabled={!userName && !selectedUser}
+          disabled={(!userName.trim() && !selectedUserId) || isSubmitting}
         >
           Go To Calendar{" "}
-          {selectedUser
-            ? `as ${selectedUser}`
+          {selectedUserId
+            ? `as ${
+                groupData?.users.find((user) => user.userId === selectedUserId)
+                  ?.userName || ""
+              }`
             : userName
               ? `as ${userName}`
               : ""}
